@@ -1,0 +1,171 @@
+<!DOCTYPE html>
+<html>
+
+	<head>
+		<meta charset="utf-8">
+		<meta http-equiv="X-UA-Compatible" content="IE=edge">
+		<meta name="viewport" content="width=device-width, initial-scale=1">
+		<meta name="description" content="canvas连线">
+		<meta name="author" content="zhong.z">
+
+		<title>canvas + js 实现连线效果</title>
+
+	</head>
+	<style>
+		body {
+			margin: 0;
+			padding: 0;
+		}
+		
+		#canvas {
+			background-color: black;
+			display: block;
+		}
+	</style>
+
+	<body>
+
+		<div>
+			<canvas id="canvas"></canvas>
+		</div>
+
+	</body>
+	<script>
+		var canvas = document.getElementById("canvas");
+
+		/* 将canvas铺满整个窗口 start */
+		var width = window.innerWidth;
+		var height = window.innerHeight;
+		canvas.width = width;
+		canvas.height = height;
+		window.onresize = function() {
+				canvas.width = window.innerWidth;
+				canvas.height = window.innerHeight;
+				width = window.innerWidth;
+				height = window.innerHeight;
+			}
+			/* 将canvas铺满整个窗口 end */
+
+		/* 创建context对象 start */
+		var ctx = canvas.getContext("2d");
+		/* 创建context对象 end */
+
+		var num = 150;
+		var data = []; // 定义数组，存储初始坐标
+		var move = {}; // 定义json，存储鼠标的坐标
+		var count = 0; // 记录被吸附的数量
+
+		/* 鼠标移动时，获取鼠标的坐标 start */
+		document.onmousemove = function(e) {
+				move.x = e.pageX;
+				move.y = e.pageY;
+				for(var i = 0; i < num; i++) {
+					data[i].isAdsorbed = false;
+				}
+				count = 0;
+			}
+			/* 鼠标移动时，获取鼠标的坐标 end */
+
+		/* 鼠标离开后，所有点还原成正常状态 start */
+		document.onmouseleave = function(e) {
+				move = {};
+				for(var i = 0; i < num; i++) {
+					data[i].isAdsorbed = false;
+				}
+				count = 0;
+			}
+			/* 鼠标离开后，所有点还原成正常状态 start */
+
+		/* 画出num个随机出现的圆点 start */
+		for(var i = 0; i < num; i++) {
+			data[i] = {};
+			// 随机得到x坐标
+			data[i].x = Math.random() * width;
+			// 随机得到y坐标
+			data[i].y = Math.random() * height;
+			// 每次刷新x坐标和y坐标改变的值（可以理解为圆点运动的速度）
+			var speed = 4;
+			data[i].changeX = Math.random() * 2 * speed - speed;
+			data[i].changeY = Math.random() * 2 * speed - speed;
+			data[i].isAdsorbed = false; // 是否被鼠标吸附
+			cricle(data[i].x, data[i].y);
+		}
+		/* 画出num个随机出现的圆点 end */
+
+		(function draw() {
+			ctx.clearRect(0, 0, width, height);
+
+			for(var i = 0; i < num; i++) {
+				// 每次刷新改变圆点的坐标值
+				data[i].x += data[i].changeX;
+				data[i].y += data[i].changeY;
+
+				// 如果圆点的坐标超出浏览器范围，则将改变值取反，即将圆点弹回
+				if(data[i].x < 0 || data[i].x > width) {
+					data[i].changeX = -data[i].changeX;
+				}
+				if(data[i].y < 0 || data[i].y > height) {
+					data[i].changeY = -data[i].changeY;
+				}
+				cricle(data[i].x, data[i].y);
+
+				/* 将距离小于50px的点连接起来 start */
+				for(var j = i + 1; j < num; j++) {
+					// 通过勾股定理计算两点之间的距离
+					if((data[i].x - data[j].x) * (data[i].x - data[j].x) + (data[i].y - data[j].y) * (data[i].y - data[j].y) < 50 * 50) {
+						line(data[i].x, data[i].y, data[j].x, data[j].y);
+					}
+				}
+				/* 将距离小于50px的点连接起来 end */
+
+				/* 吸附鼠标坐标100px范围内圆点 start */
+				var distance = (move.x - data[i].x) * (move.x - data[i].x) + (move.y - data[i].y) * (move.y - data[i].y);
+				if(move.x) {
+					if(data[i].isAdsorbed) {
+						if(distance >= 100 * 100) {
+							data[i].changeX = -data[i].changeX;
+							data[i].changeY = -data[i].changeY;
+						}
+					} else if(distance <= 100 * 100 && count < 150) {
+						data[i].isAdsorbed = true;
+						count++;
+					}
+				}
+				/* 吸附鼠标坐标100px范围内圆点 end */
+			}
+
+			window.requestAnimationFrame(draw);
+		}())
+
+		/**
+		 * 画圆点
+		 * @param {Object} x x坐标
+		 * @param {Object} y y坐标
+		 */
+		function cricle(x, y) {
+			ctx.fillStyle = "pink";
+			ctx.beginPath();
+			ctx.arc(x, y, 1, 0, 2 * Math.PI, true);
+			ctx.closePath();
+			ctx.fill();
+		}
+
+		/**
+		 * 画线
+		 * @param {Object} x1 起点x坐标
+		 * @param {Object} y1 起点y坐标
+		 * @param {Object} x2 终点x坐标
+		 * @param {Object} y2 终点y坐标
+		 */
+		function line(x1, y1, x2, y2) {
+			var lin = ctx.createLinearGradient(x1, y1, x2, y2);
+			lin.addColorStop(0, "#D9F0F8");
+			lin.addColorStop(1, "#FAFE45");
+			ctx.strokeStyle = lin;
+			ctx.moveTo(x1, y1);
+			ctx.lineTo(x2, y2);
+			ctx.stroke();
+		}
+	</script>
+
+</html>
